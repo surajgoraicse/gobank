@@ -70,7 +70,19 @@ func (s *PostgresStore) CreateAccount(a *Account) error {
 }
 
 func (s *PostgresStore) DeleteAccount(id int) error {
+	query := `delete from account where id = $1`
+	res, err := s.db.Exec(query, id)
+	if err != nil {
+		return err
+	}
+
+	rowaffected, _ := res.RowsAffected()
+	if rowaffected == 0 {
+		return fmt.Errorf("id not found %d", id)
+	}
+
 	return nil
+
 }
 func (s *PostgresStore) UpdateAccount(*Account) error {
 	return nil
