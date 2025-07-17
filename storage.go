@@ -13,13 +13,14 @@ type Storage interface {
 	DeleteAccount(int) error
 	UpdateAccount(*Account) error
 	GetAccountByID(int) (*Account, error)
+	GetAccounts() ([]*Account, error)
 }
 
 type PostgresStore struct {
 	db *sql.DB
 }
 
-// constructor function for postgres store 
+// constructor function for postgres store
 func NewPostgresStore() (*PostgresStore, error) {
 	connStr := "user=surajgoraicse password=surajgoraicse dbname=gobank host=localhost port=5432 sslmode=disable"
 	db, err := sql.Open("postgres", connStr)
@@ -45,6 +46,7 @@ func (s *PostgresStore) CreateAccountTable() error {
 		first_name varchar(50),
 		last_name varchar(50),
 		number bigint not null unique,
+		balance bigint ,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
 
@@ -53,10 +55,17 @@ func (s *PostgresStore) CreateAccountTable() error {
 		fmt.Println("account table creation error")
 	}
 	return err
-
 }
 
-func (s *PostgresStore) CreateAccount(*Account) error {
+func (s *PostgresStore) CreateAccount(a *Account) error {
+	query := `
+		insert into account (first_name, last_name, number, created_at)
+		 values ($1, $2, $3, $4) returning id, created_at
+	`
+	_, err := s.db.Exec(query, a.FirstName, a.LastName, a.Number, a.CreatedAt)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -68,4 +77,33 @@ func (s *PostgresStore) UpdateAccount(*Account) error {
 }
 func (s *PostgresStore) GetAccountByID(id int) (*Account, error) {
 	return nil, nil
+}
+func (s *PostgresStore) GetAccounts() ([]*Account, error) {
+	query := `select * from account;`
+	rows, err := s.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var accounts []*Account
+
+	for rows.Next() {
+		account := new(Account) // creates a Account type variable and returns it pointer
+		if err := rows.Scan(
+			&account.ID,
+			&account.FirstName,
+			&account.LastName,
+			&account.Number,
+			&account.CreatedAt,
+			&account.Balance,
+		); err != nil {
+			return nil, err
+		}
+		accounts = append(accounts, account)
+
+	}
+	fmt.Println(accounts, 108, "storage")
+	return accounts, nil
+
 }
