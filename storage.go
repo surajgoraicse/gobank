@@ -76,7 +76,23 @@ func (s *PostgresStore) UpdateAccount(*Account) error {
 	return nil
 }
 func (s *PostgresStore) GetAccountByID(id int) (*Account, error) {
-	return nil, nil
+
+	// var account = new(Account)
+
+	query := `select * from account where id = $1`
+	row := s.db.QueryRow(query, id)
+	// if err := rows.Scan(&account.ID, &account.FirstName, &account.LastName, &account.Number, &account.CreatedAt, &account.Balance); err != nil {
+	// 	return nil, err
+	// }
+	account, err := scanIntoAccount(row)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("account from db : ", account)
+
+	return account, nil
+
 }
 func (s *PostgresStore) GetAccounts() ([]*Account, error) {
 	query := `select * from account;`
@@ -86,10 +102,58 @@ func (s *PostgresStore) GetAccounts() ([]*Account, error) {
 	}
 	defer rows.Close()
 
+	// var accounts []*Account
+
+	// for rows.Next() {
+	// 	account := new(Account) // creates a Account type variable and returns it pointer
+	// 	if err := rows.Scan(
+	// 		&account.ID,
+	// 		&account.FirstName,
+	// 		&account.LastName,
+	// 		&account.Number,
+	// 		&account.CreatedAt,
+	// 		&account.Balance,
+	// 	); err != nil {
+	// 		return nil, err
+	// 	}
+
+	// 	accounts = append(accounts, account)
+
+	// }
+
+	accounts, err := scanIntoAccounts(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	return accounts, nil
+
+}
+
+// scan through row
+func scanIntoAccount(row *sql.Row) (*Account, error) {
+
+	account := new(Account)
+	if err := row.Scan(
+		&account.ID,
+		&account.FirstName,
+		&account.LastName,
+		&account.Number,
+		&account.CreatedAt,
+		&account.Balance); err != nil {
+		return nil, err
+	}
+	return account, nil
+}
+
+// scan through rows
+func scanIntoAccounts(rows *sql.Rows) ([]*Account, error) {
+
 	var accounts []*Account
 
 	for rows.Next() {
-		account := new(Account) // creates a Account type variable and returns it pointer
+		account := new(Account)
+		// creates a Account type variable and returns it pointer
 		if err := rows.Scan(
 			&account.ID,
 			&account.FirstName,
@@ -100,10 +164,9 @@ func (s *PostgresStore) GetAccounts() ([]*Account, error) {
 		); err != nil {
 			return nil, err
 		}
+
 		accounts = append(accounts, account)
 
 	}
-	fmt.Println(accounts, 108, "storage")
 	return accounts, nil
-
 }

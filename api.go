@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 )
@@ -49,11 +50,27 @@ func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error 
 	return fmt.Errorf("method not allowed : %s", r.Method)
 }
 
+// GET : Get one account by id
 func (s *APIServer) handleGetAccountByID(w http.ResponseWriter, r *http.Request) error {
-	// id := mux.Vars(r)["id"]
-	return WriteJSON(w, http.StatusOK, &Account{})
+	idstr := mux.Vars(r)["id"]
+	id, err := strconv.Atoi(idstr)
+	if err != nil {
+		return fmt.Errorf("invalid id given %s", idstr)
+	}
+
+	account, err := s.store.GetAccountByID(id)
+	if err != nil {
+		if err.Error() == "no rows in result set" {
+			return WriteJSON(w, http.StatusOK, "user not found")
+		} else {
+			return WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+		}
+	}
+
+	return WriteJSON(w, http.StatusOK, account)
 }
 
+// GET : Get all accounts
 func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) error {
 	accounts, err := s.store.GetAccounts()
 	if err != nil {
@@ -64,6 +81,7 @@ func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) err
 
 }
 
+// POST : create account
 func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) error {
 	createAccountReq := new(CreateAccountRequest)
 	// createAccountReq := CreateAccountRequest{} //  pass pointer
@@ -96,7 +114,7 @@ func WriteJSON(w http.ResponseWriter, status int, v any) error {
 
 // utiltiy for sending error
 type ApiError struct {
-	Error string
+	Error string `json:"error"`
 }
 
 // handler function type
