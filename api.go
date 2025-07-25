@@ -28,6 +28,7 @@ func (s *APIServer) Run() {
 	// the second paramtere accepts a function of tpe : func(http.ResponseWriter, *http.Request) but our method looks like : func(http.ResponseWriter, *http.Request) so we will create a wrapper fuction that will return the desired type of function
 	router.HandleFunc("/account", makeHTTPHandleFunc(s.handleAccount))
 	router.HandleFunc("/account/{id}", makeHTTPHandleFunc(s.handleAccountById))
+	router.HandleFunc("/transfer", makeHTTPHandleFunc(s.handleTransfer))
 
 	log.Println("JSON API server running on port ", s.listenAddr)
 	http.ListenAndServe(s.listenAddr, router)
@@ -42,14 +43,12 @@ func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error 
 		return s.handleCreateAccount(w, r)
 	}
 
-	
-
 	return fmt.Errorf("method not allowed : %s", r.Method)
 }
 
 func (s *APIServer) handleAccountById(w http.ResponseWriter, r *http.Request) error {
 	method := r.Method
-	fmt.Println("here" , method)
+	fmt.Println("here", method)
 	if method == "DELETE" {
 		fmt.Println("here i am ")
 		return s.handleDeleteAccount(w, r)
@@ -100,6 +99,7 @@ func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) 
 	if err := json.NewDecoder(r.Body).Decode(createAccountReq); err != nil {
 		return err
 	}
+	defer r.Body.Close()
 	account := NewAccount(createAccountReq.FirstName, createAccountReq.LastName)
 	if err := s.store.CreateAccount(account); err != nil {
 		return err
@@ -121,12 +121,20 @@ func (s *APIServer) handleDeleteAccount(w http.ResponseWriter, r *http.Request) 
 		fmt.Println("error deleting")
 		return err
 	}
-	WriteJSON(w, http.StatusOK, "account deleted successfully")
+	WriteJSON(w, http.StatusOK, map[string]int{"deleted": id})
 	return nil
 }
 
 func (s *APIServer) handleTransfer(w http.ResponseWriter, r *http.Request) error {
-	return nil
+	transeferReq := new(TransferRequest)
+	if err := json.NewDecoder(r.Body).Decode(transeferReq); err != nil {
+		log.Fatal("error decoding json")
+		return err
+	}
+	defer r.Body.Close()
+
+	return WriteJSON(w, http.StatusOK, transeferReq)
+
 }
 
 // utility for sending response

@@ -15,7 +15,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("%+v\n", store)
 	server := NewAPIServer(":3000", store)
 	server.Run()
 }
